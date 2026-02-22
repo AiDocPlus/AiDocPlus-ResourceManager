@@ -1,0 +1,35 @@
+{
+  "name": "@aidocplus/roles-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm tauri dev",
+    "build": "pnpm tauri build",
+    "dev:ui": "cd src-ui && vite",
+    "build:ui": "cd src-ui && tsc && vite build",
+    "tauri": "tauri",
+    "lint": "cd src-ui && tsc --noEmit",
+    "clean": "rm -rf src-ui/dist src-tauri/target"
+  },
+  "dependencies": {
+    "@aidocplus/manager-shared": "workspace:*",
+    "@aidocplus/manager-ui": "workspace:*",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "i18next": "^25.8.7",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-i18next": "^16.5.4"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.0",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.6.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "~5.9.3",
+    "vite": "^7.0.0"
+  }
+}
