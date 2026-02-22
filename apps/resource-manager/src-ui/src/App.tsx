@@ -5,20 +5,25 @@ import { ALL_RESOURCE_TYPES, type ResourceTypeKey, type ResourceTypeMeta } from 
 
 export function App() {
   const [activeType, setActiveType] = useState<ResourceTypeKey>('roles');
-  const [promptTemplatesDataDir, setPromptTemplatesDataDir] = useState<string>('');
+  const [homeDir, setHomeDir] = useState<string>('');
+  const [externalDataDir, setExternalDataDir] = useState<string>('');
   const [initialized, setInitialized] = useState(false);
 
-  // 初始化：从后端获取 --resource-type 和 --data-dir
+  // 初始化：从后端获取 --resource-type、--data-dir 和用户主目录
   useEffect(() => {
     Promise.all([
       invoke<string>('cmd_get_resource_type').catch(() => ''),
       invoke<string | null>('cmd_get_data_dir').catch(() => null),
-    ]).then(([resourceType, dataDir]) => {
+      invoke<string>('cmd_get_home_dir').catch(() => ''),
+    ]).then(([resourceType, dataDir, home]) => {
       if (resourceType && ALL_RESOURCE_TYPES.some((t) => t.key === resourceType)) {
         setActiveType(resourceType as ResourceTypeKey);
       }
       if (dataDir) {
-        setPromptTemplatesDataDir(dataDir);
+        setExternalDataDir(dataDir);
+      }
+      if (home) {
+        setHomeDir(home);
       }
       setInitialized(true);
     });
@@ -27,17 +32,21 @@ export function App() {
   // 获取当前活跃类型的配置
   const activeMeta = ALL_RESOURCE_TYPES.find((t) => t.key === activeType)!;
 
-  // 计算当前类型的 config（可能需要覆盖 defaultDataDir）
+  // 计算当前类型的 config，自动填充数据目录
   const getConfigForType = useCallback(
     (meta: ResourceTypeMeta) => {
       const config = { ...meta.config };
-      // 提示词模板：使用主程序传入的 data-dir
-      if (meta.key === 'prompt-templates' && promptTemplatesDataDir) {
-        config.defaultDataDir = promptTemplatesDataDir;
+      // 提示词模板：使用主程序传入的 --data-dir
+      if (meta.key === 'prompt-templates' && externalDataDir) {
+        config.defaultDataDir = externalDataDir;
+      }
+      // 其他类型（生产模式下 defaultDataDir 为空）：根据约定计算 ~/AiDocPlus/<suffix>/
+      else if (meta.dataDirSuffix && homeDir && !config.defaultDataDir) {
+        config.defaultDataDir = `${homeDir}/AiDocPlus/${meta.dataDirSuffix}`;
       }
       return config;
     },
-    [promptTemplatesDataDir]
+    [externalDataDir, homeDir]
   );
 
   if (!initialized) {

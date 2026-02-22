@@ -39,6 +39,7 @@ fn main() {
         .manage(resource_type_state)
         .invoke_handler(tauri::generate_handler![
             cmd_get_resource_type,
+            cmd_get_home_dir,
             // 复用所有管理器命令
             aidocplus_manager_rust::commands::cmd_get_data_dir,
             aidocplus_manager_rust::commands::cmd_scan_resources,
@@ -84,4 +85,11 @@ pub struct ResourceTypeState(std::sync::Mutex<String>);
 #[tauri::command]
 fn cmd_get_resource_type(state: tauri::State<'_, ResourceTypeState>) -> Result<String, String> {
     Ok(state.0.lock().map_err(|e| e.to_string())?.clone())
+}
+
+#[tauri::command]
+fn cmd_get_home_dir() -> Result<String, String> {
+    dirs::home_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .ok_or_else(|| "无法获取用户主目录".to_string())
 }
