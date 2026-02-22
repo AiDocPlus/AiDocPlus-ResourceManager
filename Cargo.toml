@@ -1,11 +1,6 @@
 [workspace]
 members = [
   "packages/manager-rust",
-  "apps/roles-manager/src-tauri",
-  "apps/ai-providers-manager/src-tauri",
-  "apps/prompt-templates-manager/src-tauri",
-  "apps/project-templates-manager/src-tauri",
-  "apps/doc-templates-manager/src-tauri",
-  "apps/plugins-manager/src-tauri",
+  "apps/resource-manager/src-tauri",
 ]
 resolver = "2"

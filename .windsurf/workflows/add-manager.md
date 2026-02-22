@@ -1,60 +1,38 @@
 ---
-description: 添加新的资源管理器到 AiDocPlus-ResourceManager 项目
+description: 添加新的资源类型到统一资源管理器
 ---
 
-## 添加新资源管理器
+## 添加新资源类型
 
-### 1. 复制现有管理器
+统一资源管理器位于 `apps/resource-manager/`，所有资源类型共用一个 Tauri 应用。
 
-```bash
-cp -r /Users/jdh/Code/AiDocPlus-ResourceManager/apps/roles-manager /Users/jdh/Code/AiDocPlus-ResourceManager/apps/{new-name}
+### 1. 创建编辑面板
+
+在 `apps/resource-manager/src-ui/src/panels/` 下创建 `XxxEditor.tsx`：
+
+```tsx
+import type { EditorPanelProps } from '@aidocplus/manager-shared';
+
+export function XxxEditor({ resource, onChange }: EditorPanelProps) {
+  // 实现资源类型特有的编辑 UI
+}
 ```
 
-### 2. 清理复制产物
+### 2. 添加配置
+
+在 `apps/resource-manager/src-ui/src/configs.ts` 中：
+
+1. 导入新的编辑面板
+2. 创建新的 `ResourceTypeConfig` 对象
+3. 在 `ALL_RESOURCE_TYPES` 数组中添加新条目
+
+### 3. 构建验证
 
 // turbo
 ```bash
-rm -rf /Users/jdh/Code/AiDocPlus-ResourceManager/apps/{new-name}/src-ui/node_modules /Users/jdh/Code/AiDocPlus-ResourceManager/apps/{new-name}/src-tauri/target
+cd /Users/jdh/Code/AiDocPlus-ResourceManager/apps/resource-manager && pnpm tauri dev
 ```
 
-### 3. 修改配置文件
+### 4. 更新主程序
 
-修改以下文件中的名称、端口等：
-
-- `apps/{new-name}/package.json` — `name` 字段改为 `@aidocplus/{new-name}`
-- `apps/{new-name}/src-tauri/Cargo.toml` — `name` 字段
-- `apps/{new-name}/src-tauri/tauri.conf.json` — `productName`、`identifier`、`devUrl` 端口
-- `apps/{new-name}/src-ui/vite.config.ts` — `server.port` 和 `hmr.port`
-- `apps/{new-name}/src-ui/index.html` — `<title>`
-- `apps/{new-name}/src-tauri/src/main.rs` — 错误消息
-
-### 4. 创建专属文件
-
-删除复制过来的 roles 专属文件，创建新的：
-
-- `src-ui/src/config.ts` — 定义 `ResourceTypeConfig`（资源类型、字段、AI 提示词）
-- `src-ui/src/panels/XxxEditor.tsx` — 自定义编辑面板（实现 `EditorPanelProps`）
-- `src-ui/src/App.tsx` — `<ManagerApp config={xxxConfig} />`
-
-### 5. 注册到 workspace
-
-在根 `Cargo.toml` 的 `members` 数组中添加：
-```toml
-"apps/{new-name}/src-tauri",
-```
-
-在根 `package.json` 的 `scripts` 中添加：
-```json
-"dev:{short-name}": "pnpm --filter @aidocplus/{new-name} tauri dev"
-```
-
-### 6. 安装依赖并验证
-
-// turbo
-```bash
-cd /Users/jdh/Code/AiDocPlus-ResourceManager && pnpm install
-```
-
-```bash
-cd /Users/jdh/Code/AiDocPlus-ResourceManager/apps/{new-name} && pnpm tauri dev
-```
+在 `AiDocPlus-Main/apps/desktop/src-tauri/src/commands/resource.rs` 的 `open_resource_manager` 中添加新的管理器名称 → resource-type 映射。

@@ -3239,6 +3239,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "resource-manager"
+version = "0.1.0"
+dependencies = [
+ "aidocplus-manager-rust",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-shell",
+]
+
+[[package]]
 name = "rfd"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
