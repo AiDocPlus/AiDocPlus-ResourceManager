@@ -36,8 +36,8 @@ export function App() {
   const getConfigForType = useCallback(
     (meta: ResourceTypeMeta) => {
       const config = { ...meta.config };
-      // 提示词模板：使用主程序传入的 --data-dir
-      if (meta.key === 'prompt-templates' && externalDataDir) {
+      // 当前活跃类型：使用主程序传入的 --data-dir（主程序已按资源类型计算好正确路径）
+      if (meta.key === activeType && externalDataDir) {
         config.defaultDataDir = externalDataDir;
       }
       // 其他类型（生产模式下 defaultDataDir 为空）：根据约定计算 ~/AiDocPlus/<suffix>/
@@ -46,7 +46,7 @@ export function App() {
       }
       return config;
     },
-    [externalDataDir, homeDir]
+    [activeType, externalDataDir, homeDir]
   );
 
   if (!initialized) {
