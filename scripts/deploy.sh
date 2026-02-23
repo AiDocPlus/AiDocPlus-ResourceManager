@@ -8,7 +8,16 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 PARENT_DIR="$(dirname "$REPO_DIR")"
 TARGET_DIR="${PARENT_DIR}/AiDocPlus/apps/desktop/src-tauri/bundled-resources/managers"
 
-BUNDLE_DIR="${REPO_DIR}/target/release/bundle/macos"
+# 共享 target 目录（通过 .cargo/config.toml 指向主程序 target）
+# 优先使用 CARGO_TARGET_DIR（CI 环境），否则读取 .cargo/config.toml 中的 target-dir
+if [ -n "$CARGO_TARGET_DIR" ]; then
+  TARGET_BASE="$CARGO_TARGET_DIR"
+elif [ -f "${REPO_DIR}/.cargo/config.toml" ]; then
+  TARGET_BASE=$(grep 'target-dir' "${REPO_DIR}/.cargo/config.toml" | sed 's/.*= *"//' | sed 's/".*//')
+fi
+# 回退到默认 target 目录
+TARGET_BASE="${TARGET_BASE:-${REPO_DIR}/target}"
+BUNDLE_DIR="${TARGET_BASE}/release/bundle/macos"
 APP_NAME="资源管理器.app"
 APP_PATH="${BUNDLE_DIR}/${APP_NAME}"
 

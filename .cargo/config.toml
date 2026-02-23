@@ -1,0 +1,4 @@
+# 共享主程序的 target 目录，避免重复编译 555 个相同依赖
+# 主程序 target: AiDocPlus-Main/apps/desktop/src-tauri/target
+[build]
+target-dir = "/Users/jdh/Code/AiDocPlus-Main/apps/desktop/src-tauri/target"
