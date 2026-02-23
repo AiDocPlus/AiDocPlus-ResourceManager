@@ -137,7 +137,13 @@ pnpm install
 ## 关键配置细节
 
 ### Cargo workspace
-根目录 `Cargo.toml` 定义 workspace，统一管理器 + manager-rust 共享 `target/` 编译缓存。首次编译约 1 分钟（500+ 依赖），后续增量编译约 4 秒。
+根目录 `Cargo.toml` 定义 workspace，统一管理器 + manager-rust 共享编译缓存。
+
+**共享 target 目录**：通过 `.cargo/config.toml` 将 `target-dir` 指向主程序的 target 目录（`AiDocPlus-Main/apps/desktop/src-tauri/target`），避免重复编译 555 个相同依赖。首次编译约 35 秒（复用主程序已编译的依赖），后续增量编译约 4 秒。
+
+**release profile 必须与主程序一致**：`lto = "thin"`、`opt-level = 2`、`codegen-units = 1`。否则共享 target 时会因配置不同导致重新编译。
+
+CI 环境中 `CARGO_TARGET_DIR` 环境变量优先级高于 `.cargo/config.toml` 中的本地路径。
 
 ### pnpm workspace
 `pnpm-workspace.yaml` 定义 `packages: ['packages/*', 'apps/*']`。`package.json` 在 `apps/{name}/` 层级（不在 `src-ui/` 下），因为 Tauri CLI 需要从包含 `src-tauri/` 的目录运行。
@@ -173,3 +179,12 @@ pnpm install
 - Rust 文件修改后自动重新编译
 - 前端由 Vite 热更新
 - 如遇端口占用：`lsof -ti:1420 | xargs kill -9`
+
+### 部署
+
+`scripts/deploy.sh` 将构建产物复制到主程序的 `bundled-resources/managers/`。它会自动解析共享 target 路径：
+- 优先使用 `CARGO_TARGET_DIR` 环境变量（CI 环境）
+- 其次读取 `.cargo/config.toml` 中的 `target-dir`（本地环境）
+- 回退到默认 `target/` 目录
+
+CI 中使用 `tauri build --no-bundle` 跳过 WiX/MSI 打包，只生成 exe 文件。
