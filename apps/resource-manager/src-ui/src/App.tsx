@@ -4,7 +4,7 @@ import { ManagerApp } from '@aidocplus/manager-ui';
 import { ALL_RESOURCE_TYPES, type ResourceTypeKey, type ResourceTypeMeta } from './configs';
 
 export function App() {
-  const [activeType, setActiveType] = useState<ResourceTypeKey>('roles');
+  const [activeType, setActiveType] = useState<ResourceTypeKey>('prompt-templates');
   const [homeDir, setHomeDir] = useState<string>('');
   const [externalDataDir, setExternalDataDir] = useState<string>('');
   const [initialized, setInitialized] = useState(false);

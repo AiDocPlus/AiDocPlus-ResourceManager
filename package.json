@@ -4,12 +4,7 @@
   "private": true,
   "description": "AiDocPlus Resource Manager - Independent resource management tools",
   "scripts": {
-    "dev:roles": "pnpm --filter @aidocplus/roles-manager tauri dev",
-    "dev:ai-providers": "pnpm --filter @aidocplus/ai-providers-manager tauri dev",
-    "dev:prompt-templates": "pnpm --filter @aidocplus/prompt-templates-manager tauri dev",
-    "dev:project-templates": "pnpm --filter @aidocplus/project-templates-manager tauri dev",
-    "dev:doc-templates": "pnpm --filter @aidocplus/doc-templates-manager tauri dev",
-    "dev:plugins": "pnpm --filter @aidocplus/plugins-manager tauri dev",
+    "dev:resource-manager": "pnpm --filter @aidocplus/resource-manager tauri dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "clean": "turbo run clean && rm -rf node_modules"

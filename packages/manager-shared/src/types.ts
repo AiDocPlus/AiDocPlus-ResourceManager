@@ -22,8 +22,6 @@ export interface ResourceTypeConfig<CustomPanel = any> {
   CustomEditorPanel?: CustomPanel;
   /** 新建资源时的默认 manifest 模板 */
   defaultManifest: Partial<ManifestBase>;
-  /** 是否支持 roles 字段 */
-  hasRolesField: boolean;
   /** AI 生成配置 */
   aiGenerate: AIGenerateConfig;
   /** 数据模式：directory（目录结构）或 json-file（每个分类一个JSON文件） */

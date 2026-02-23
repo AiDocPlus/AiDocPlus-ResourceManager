@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**AiDocPlus-ResourceManager** 是 AiDocPlus 项目的资源管理器工具集，包含 6 个独立的 Tauri 2 桌面应用，用于可视化管理各类资源仓库（角色、AI 服务商、提示词模板、项目模板、文档模板、插件）的数据。
+**AiDocPlus-ResourceManager** 是 AiDocPlus 项目的资源管理器，包含一个统一的 Tauri 2 桌面应用，用于可视化管理提示词模板和文档模板的数据。
 
 ### 项目类型
 - **Monorepo**（pnpm workspace + Cargo workspace）
-- **6 个独立 Tauri 2 桌面应用**（共享后端和 UI 组件）
+- **统一 Tauri 2 桌面应用**（共享后端和 UI 组件）
 - **全栈应用**（Rust 后端 + React 前端）
 
 ### 技术栈
@@ -67,20 +67,15 @@ AiDocPlus-ResourceManager/
 │           │   └── en.json              # 英文翻译
 │           └── index.ts                 # 公共导出
 ├── apps/
-│   ├── roles-manager/           # 角色管理器（端口 1420）
-│   ├── ai-providers-manager/    # AI 服务商管理器（端口 1421）
-│   ├── prompt-templates-manager/# 提示词模板管理器（端口 1422）
-│   ├── project-templates-manager/# 项目模板管理器（端口 1423）
-│   ├── doc-templates-manager/   # 文档模板管理器（端口 1424）
-│   └── plugins-manager/        # 插件管理器（端口 1425）
-├── Cargo.toml              # Cargo workspace（7 个成员共享 target/）
+│   └── resource-manager/       # 统一资源管理器（提示词模板 + 文档模板）
+├── Cargo.toml              # Cargo workspace（共享 target/）
 ├── pnpm-workspace.yaml     # pnpm workspace: ['packages/*', 'apps/*']
-└── package.json            # 根 package.json（dev:xxx 便捷脚本）
+└── package.json            # 根 package.json
 ```
 
-每个管理器应用的结构：
+统一管理器应用的结构：
 ```
-apps/{name}/
+apps/resource-manager/
 ├── package.json            # pnpm workspace 包（含 @tauri-apps/cli + 前端依赖）
 ├── src-tauri/              # Rust 后端
 │   ├── Cargo.toml          # 依赖 aidocplus-manager-rust（path 引用）
@@ -89,45 +84,36 @@ apps/{name}/
 │   ├── tauri.conf.json     # 窗口标题、端口、图标
 │   └── icons/              # 应用图标
 └── src-ui/                 # React 前端
-    ├── vite.config.ts      # Vite 配置（端口、HMR）
+    ├── vite.config.ts      # Vite 配置
     ├── tsconfig.json       # TypeScript 配置
     ├── index.html
-    ├── src/
-    │   ├── main.tsx        # React 入口
-    │   ├── App.tsx         # <ManagerApp config={xxxConfig} />
-    │   ├── config.ts       # ResourceTypeConfig 定义
-    │   ├── index.css       # Tailwind CSS 入口
-    │   └── panels/         # 自定义编辑面板
-    │       └── XxxEditor.tsx
-    └── (无 package.json，依赖由 apps/{name}/package.json 管理)
+    └── src/
+        ├── main.tsx        # React 入口
+        ├── App.tsx         # <ManagerApp />
+        ├── configs.ts      # 资源类型配置（promptTemplatesConfig + docTemplatesConfig）
+        ├── index.css       # Tailwind CSS 入口
+        └── panels/         # 自定义编辑面板
+            ├── PromptTemplateEditor.tsx
+            └── DocTemplateEditor.tsx
 ```
 
-## 6 个管理器
+## 资源类型
 
-| 管理器 | 端口 | 目标资源仓库 | 自定义编辑面板 | 内容文件 |
-|--------|------|-------------|---------------|---------|
-| roles-manager | 1420 | AiDocPlus-Roles | RoleEditor | system-prompt.md |
-| ai-providers-manager | 1421 | AiDocPlus-AIProviders | AIProviderEditor | — |
-| prompt-templates-manager | 1422 | AiDocPlus-PromptTemplates | PromptTemplateEditor | content.md |
-| project-templates-manager | 1423 | AiDocPlus-ProjectTemplates | ProjectTemplateEditor | content.json |
-| doc-templates-manager | 1424 | AiDocPlus-DocTemplates | DocTemplateEditor | content.json |
-| plugins-manager | 1425 | AiDocPlus-Plugins | PluginEditor | — |
+| 资源类型 | 目标资源仓库 | 自定义编辑面板 | 内容文件 | 数据模式 |
+|----------|-------------|---------------|--------|----------|
+| 提示词模板 | AiDocPlus-PromptTemplates | PromptTemplateEditor | content.md | JSON 文件模式 |
+| 文档模板 | AiDocPlus-DocTemplates | DocTemplateEditor | content.json | 目录模式 |
 
 ## 运行命令
 
 ### 开发模式
 
 ```bash
-# 从根目录启动某个管理器
-pnpm dev:roles
-pnpm dev:ai-providers
-pnpm dev:prompt-templates
-pnpm dev:project-templates
-pnpm dev:doc-templates
-pnpm dev:plugins
+# 启动统一资源管理器
+pnpm dev:resource-manager
 
 # 或从管理器目录启动
-cd apps/roles-manager && pnpm tauri dev
+cd apps/resource-manager && pnpm tauri dev
 ```
 
 ### 验证
@@ -136,8 +122,8 @@ cd apps/roles-manager && pnpm tauri dev
 # Cargo workspace 全量检查（所有 Rust 代码）
 cargo check --workspace
 
-# 单个管理器 TypeScript 检查
-cd apps/roles-manager/src-ui && npx tsc --noEmit
+# TypeScript 检查
+cd apps/resource-manager/src-ui && npx tsc --noEmit
 
 # 安装依赖
 pnpm install
@@ -151,7 +137,7 @@ pnpm install
 ## 关键配置细节
 
 ### Cargo workspace
-根目录 `Cargo.toml` 定义 workspace，所有 6 个管理器 + manager-rust 共享 `target/` 编译缓存。首次编译约 1 分钟（500+ 依赖），后续增量编译约 4 秒。
+根目录 `Cargo.toml` 定义 workspace，统一管理器 + manager-rust 共享 `target/` 编译缓存。首次编译约 1 分钟（500+ 依赖），后续增量编译约 4 秒。
 
 ### pnpm workspace
 `pnpm-workspace.yaml` 定义 `packages: ['packages/*', 'apps/*']`。`package.json` 在 `apps/{name}/` 层级（不在 `src-ui/` 下），因为 Tauri CLI 需要从包含 `src-tauri/` 的目录运行。
@@ -160,95 +146,14 @@ pnpm install
 - `beforeDevCommand`: `npx vite src-ui` — 从项目根运行 vite，指向 `src-ui` 子目录
 - `beforeBuildCommand`: `npx vite build src-ui`
 - `frontendDist`: `../src-ui/dist`
-- 每个管理器使用不同端口（1420-1425），HMR 端口 = server port + 1
 
-### 目录结构注意事项
-- `src-ui/` 下**没有** `package.json`（已合并到 `apps/{name}/package.json`）
-- `src-ui/` 下**没有** `node_modules`（由 pnpm workspace 在 `apps/{name}/` 层级管理）
-- 复制管理器目录时需清理 `src-ui/node_modules` 和 `src-tauri/target`
+## 添加新资源类型
 
-## 共享包 API
-
-### manager-rust Tauri Commands
-
-```rust
-// 资源 CRUD
-list_resources(data_dir: String) -> Vec<ResourceSummary>
-get_resource(resource_path: String, content_files: Vec<String>) -> ResourceItem
-save_resource(resource_path: String, manifest: Value, content_files: HashMap<String, String>) -> ()
-create_resource(data_dir: String, id: String, manifest: Value, content_files: HashMap<String, String>) -> String
-delete_resource(resource_path: String) -> ()
-reorder_resources(data_dir: String, ids: Vec<String>) -> ()
-
-// 分类管理
-load_categories(data_dir: String) -> MetaConfig
-save_categories(data_dir: String, meta: MetaConfig) -> ()
-
-// 导入导出
-import_resources(zip_path: String, data_dir: String) -> ImportResult
-export_resources(resource_paths: Vec<String>, output_path: String) -> ()
-
-// 批量操作
-batch_update(data_dir: String, operation: BatchOperation) -> ()
-
-// AI 生成
-ai_generate(config: AIServiceConfig, system_prompt: String, user_prompt: String) -> String
-ai_generate_stream(app: AppHandle, config: AIServiceConfig, system_prompt: String, user_prompt: String) -> ()
-
-// 构建脚本
-run_build_script(script_path: String) -> String
-
-// AI 配置持久化
-load_ai_config() -> Option<AIServiceConfig>
-save_ai_config(config: AIServiceConfig) -> ()
-```
-
-### manager-ui 组件
-
-```typescript
-// 主组件
-<ManagerApp config={ResourceTypeConfig} />
-
-// 编辑面板 Props（自定义面板实现此接口）
-interface EditorPanelProps {
-  resource: ResourceItem;
-  onChange: (changes: ResourceChanges) => void;
-}
-
-// ResourceTypeConfig（每个管理器提供一份）
-interface ResourceTypeConfig {
-  appTitle: string;
-  resourceType: string;
-  resourceLabel: string;
-  defaultDataDir: string;
-  contentFiles: ContentFileSpec[];
-  extraManifestFields: FieldDefinition[];
-  CustomEditorPanel?: ComponentType<EditorPanelProps>;
-  defaultManifest: Partial<ManifestBase>;
-  hasRolesField: boolean;
-  hasSubCategories: boolean;
-  aiGenerate: AIGenerateConfig;
-}
-```
-
-## 添加新管理器
-
-1. 复制现有管理器目录（如 `apps/roles-manager/`）到 `apps/{new-name}/`
-2. 清理 `src-ui/node_modules` 和 `src-tauri/target`
-3. 修改以下文件：
-   - `package.json` — `name` 字段
-   - `src-tauri/Cargo.toml` — `name` 字段
-   - `src-tauri/tauri.conf.json` — `productName`、`identifier`、`devUrl` 端口
-   - `src-ui/vite.config.ts` — `server.port` 和 `hmr.port`
-   - `src-ui/index.html` — `<title>`
-   - `src-tauri/src/main.rs` — 错误消息
-4. 创建专属文件：
-   - `src-ui/src/config.ts` — `ResourceTypeConfig`
-   - `src-ui/src/panels/XxxEditor.tsx` — 自定义编辑面板
-   - `src-ui/src/App.tsx` — `<ManagerApp config={xxxConfig} />`
-5. 在根 `Cargo.toml` 的 `members` 中添加新路径
-6. 在根 `package.json` 中添加 `dev:xxx` 脚本
-7. `pnpm install` + `pnpm tauri dev` 验证
+在 `apps/resource-manager/src-ui/src/configs.ts` 中：
+1. 创建新的编辑面板 `panels/XxxEditor.tsx`
+2. 添加新的 `ResourceTypeConfig` 对象
+3. 在 `ALL_RESOURCE_TYPES` 数组中添加新条目
+4. 在主程序 `resource.rs` 的 `open_resource_manager` 中添加新的管理器名称映射
 
 ## Development Guidelines
 

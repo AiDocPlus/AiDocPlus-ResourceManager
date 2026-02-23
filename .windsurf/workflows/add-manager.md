@@ -4,7 +4,7 @@ description: 添加新的资源类型到统一资源管理器
 
 ## 添加新资源类型
 
-统一资源管理器位于 `apps/resource-manager/`，所有资源类型共用一个 Tauri 应用。
+统一资源管理器位于 `apps/resource-manager/`，当前管理提示词模板和文档模板两种资源类型。
 
 ### 1. 创建编辑面板
 
@@ -24,7 +24,8 @@ export function XxxEditor({ resource, onChange }: EditorPanelProps) {
 
 1. 导入新的编辑面板
 2. 创建新的 `ResourceTypeConfig` 对象
-3. 在 `ALL_RESOURCE_TYPES` 数组中添加新条目
+3. 在 `ResourceTypeKey` 类型中添加新的 key
+4. 在 `ALL_RESOURCE_TYPES` 数组中添加新条目
 
 ### 3. 构建验证
 
