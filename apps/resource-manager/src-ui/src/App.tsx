@@ -5,26 +5,22 @@ import { ALL_RESOURCE_TYPES, type ResourceTypeKey, type ResourceTypeMeta } from 
 
 export function App() {
   const [activeType, setActiveType] = useState<ResourceTypeKey>('prompt-templates');
-  const [homeDir, setHomeDir] = useState<string>('');
   const [externalDataDir, setExternalDataDir] = useState<string>('');
   const [initialized, setInitialized] = useState(false);
 
-  // 初始化：从后端获取 --resource-type、--data-dir 和用户主目录
+  // 初始化：从后端获取 --resource-type 和 --data-dir
   useEffect(() => {
     Promise.all([
       invoke<string>('cmd_get_resource_type').catch(() => ''),
       invoke<string | null>('cmd_get_data_dir').catch(() => null),
-      invoke<string>('cmd_get_home_dir').catch(() => ''),
-    ]).then(([resourceType, dataDir, home]) => {
+    ]).then(([resourceType, dataDir]) => {
       if (resourceType && ALL_RESOURCE_TYPES.some((t) => t.key === resourceType)) {
         setActiveType(resourceType as ResourceTypeKey);
       }
       if (dataDir) {
         setExternalDataDir(dataDir);
       }
-      if (home) {
-        setHomeDir(home);
-      }
+      console.log('[DEBUG] 初始化完成:', { resourceType, dataDir });
       setInitialized(true);
     });
   }, []);
@@ -36,17 +32,15 @@ export function App() {
   const getConfigForType = useCallback(
     (meta: ResourceTypeMeta) => {
       const config = { ...meta.config };
-      // 当前活跃类型：使用主程序传入的 --data-dir（主程序已按资源类型计算好正确路径）
+
+      // 主程序传入的 --data-dir 用于当前活跃类型
       if (meta.key === activeType && externalDataDir) {
         config.defaultDataDir = externalDataDir;
       }
-      // 其他类型（生产模式下 defaultDataDir 为空）：根据约定计算 ~/AiDocPlus/<suffix>/
-      else if (meta.dataDirSuffix && homeDir && !config.defaultDataDir) {
-        config.defaultDataDir = `${homeDir}/AiDocPlus/${meta.dataDirSuffix}`;
-      }
+
       return config;
     },
-    [activeType, externalDataDir, homeDir]
+    [activeType, externalDataDir]
   );
 
   if (!initialized) {

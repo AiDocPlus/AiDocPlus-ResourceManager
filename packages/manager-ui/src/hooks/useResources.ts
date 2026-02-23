@@ -206,7 +206,7 @@ export async function loadJsonResourceDetail(
     icon: '',
     version: '1.0.0',
     author: 'AiDocPlus',
-    resourceType: 'prompt-template',
+    resourceType: detail.categoryKey === 'ppt-theme' ? 'document-template' : 'prompt-template',
     majorCategory: detail.categoryKey,
     subCategory: '',
     tags: [],

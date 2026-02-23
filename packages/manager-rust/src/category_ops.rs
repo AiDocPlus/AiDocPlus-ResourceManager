@@ -5,7 +5,9 @@ use std::path::Path;
 /// 读取 _meta.json 分类配置
 pub fn read_meta(data_dir: &str) -> Result<MetaConfig, String> {
     let meta_path = Path::new(data_dir).join("_meta.json");
+    eprintln!("[DEBUG] read_meta: meta_path={}", meta_path.display());
     if !meta_path.exists() {
+        eprintln!("[DEBUG] read_meta: _meta.json 不存在!");
         return Ok(MetaConfig {
             schema_version: "1.0".to_string(),
             resource_type: String::new(),

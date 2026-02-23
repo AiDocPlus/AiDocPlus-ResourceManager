@@ -1,6 +1,32 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use aidocplus_manager_rust::commands::DataDirState;
+use std::path::PathBuf;
+use std::sync::OnceLock;
+
+/// bundled-resources 根目录缓存
+static BUNDLED_RESOURCES_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+
+/// 从 exe 路径向上查找 bundled-resources 目录
+fn find_bundled_resources() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let mut dir = exe.parent()?.to_path_buf();
+    loop {
+        // 检查 src-tauri/bundled-resources（dev 模式）
+        let candidate = dir.join("src-tauri").join("bundled-resources");
+        if candidate.exists() {
+            return Some(candidate);
+        }
+        // 检查 bundled-resources（release 模式）
+        let candidate2 = dir.join("bundled-resources");
+        if candidate2.exists() {
+            return Some(candidate2);
+        }
+        if !dir.pop() {
+            return None;
+        }
+    }
+}
 
 fn main() {
     let data_dir_state = DataDirState::new();
@@ -8,17 +34,20 @@ fn main() {
 
     // 解析命令行参数
     let args: Vec<String> = std::env::args().collect();
+    eprintln!("[DEBUG] 资源管理器启动参数: {:?}", args);
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
             "--data-dir" => {
                 if let Some(dir) = args.get(i + 1) {
+                    eprintln!("[DEBUG] 接收 --data-dir: {}", dir);
                     data_dir_state.set(dir.clone());
                     i += 1;
                 }
             }
             "--resource-type" => {
                 if let Some(rt) = args.get(i + 1) {
+                    eprintln!("[DEBUG] 接收 --resource-type: {}", rt);
                     resource_type = rt.clone();
                     i += 1;
                 }
@@ -40,6 +69,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             cmd_get_resource_type,
             cmd_get_home_dir,
+            cmd_get_bundled_sub_dir,
             // 复用所有管理器命令
             aidocplus_manager_rust::commands::cmd_get_data_dir,
             aidocplus_manager_rust::commands::cmd_scan_resources,
@@ -92,4 +122,17 @@ fn cmd_get_home_dir() -> Result<String, String> {
     dirs::home_dir()
         .map(|p| p.to_string_lossy().to_string())
         .ok_or_else(|| "无法获取用户主目录".to_string())
+}
+
+#[tauri::command]
+fn cmd_get_bundled_sub_dir(sub: String) -> Option<String> {
+    let bundled = BUNDLED_RESOURCES_DIR.get_or_init(find_bundled_resources);
+    bundled.as_ref().and_then(|b| {
+        let path = b.join(&sub);
+        if path.exists() {
+            Some(path.to_string_lossy().to_string())
+        } else {
+            None
+        }
+    })
 }

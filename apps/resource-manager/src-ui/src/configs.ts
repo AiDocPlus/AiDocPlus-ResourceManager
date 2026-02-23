@@ -59,8 +59,9 @@ const docTemplatesConfig: ResourceTypeConfig<ComponentType<EditorPanelProps>> = 
   appTitle: '文档模板管理器',
   resourceType: 'doc-template',
   resourceLabel: '文档模板',
-  defaultDataDir: isDevMode ? '/Users/jdh/Code/AiDocPlus-DocTemplates/data' : '',
+  defaultDataDir: isDevMode ? '/Users/jdh/Code/AiDocPlus-DocTemplates/dist/json' : '',
   repoDir: isDevMode ? '/Users/jdh/Code/AiDocPlus-DocTemplates' : undefined,
+  dataMode: 'json-file',
   contentFiles: [
     { filename: 'content.json', type: 'json', label: '模板内容', defaultContent: JSON.stringify({ authorNotes: '', content: '' }, null, 2) },
   ],

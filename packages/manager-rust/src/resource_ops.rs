@@ -5,7 +5,9 @@ use std::path::Path;
 /// 扫描数据目录，返回所有资源摘要
 pub fn scan_resources(data_dir: &str) -> Result<Vec<ResourceSummary>, String> {
     let data_path = Path::new(data_dir);
+    eprintln!("[DEBUG] scan_resources: data_dir={}", data_dir);
     if !data_path.exists() {
+        eprintln!("[DEBUG] scan_resources: 目录不存在!");
         return Ok(Vec::new());
     }
 

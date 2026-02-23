@@ -67,6 +67,13 @@ export function ManagerApp({ config }: ManagerAppProps) {
   // 加载数据
   useEffect(() => {
     if (!dataDir) return;
+    // DEBUG: 输出数据加载信息
+    console.log('[DEBUG] ManagerApp 加载数据:', {
+      dataDir,
+      isJsonMode,
+      dataMode: config.dataMode,
+      resourceType: config.resourceType,
+    });
     if (isJsonMode) {
       loadJsonResources(dataDir);
       loadJsonCategories(dataDir);
