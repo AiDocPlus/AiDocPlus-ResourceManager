@@ -39,3 +39,23 @@ export async function loadJsonCategories(dataDir: string): Promise<void> {
     console.error('加载 JSON 分类失败:', e);
   }
 }
+
+/**
+ * 保存分类排序（JSON 文件模式：逐个更新各 .json 文件的 order 字段）
+ */
+export async function saveJsonCategories(
+  dataDir: string,
+  categories: CategoryDefinition[]
+): Promise<void> {
+  for (const cat of categories) {
+    await invoke('cmd_save_json_category', {
+      dataDir,
+      categoryKey: cat.key,
+      name: cat.name,
+      icon: cat.icon ?? '📋',
+      order: cat.order,
+    });
+  }
+  // 重新加载
+  await loadJsonCategories(dataDir);
+}

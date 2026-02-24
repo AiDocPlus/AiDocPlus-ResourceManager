@@ -10,7 +10,7 @@ import type {
 import { useResourceStore } from '../stores/useResourceStore';
 import { useUndoStore } from '../stores/useUndoStore';
 import { loadResources, loadResourceDetail, saveResource, deleteResource, createResource, reorderResources, batchSetEnabled, batchMoveCategory, loadJsonResources, loadJsonResourceDetail, saveJsonResource, createJsonResource, deleteJsonResource, batchDeleteJsonResources, batchMoveJsonCategory } from '../hooks/useResources';
-import { loadCategories, saveCategories, loadJsonCategories } from '../hooks/useCategories';
+import { loadCategories, saveCategories, loadJsonCategories, saveJsonCategories } from '../hooks/useCategories';
 import { ManagerLayout } from './ManagerLayout';
 import { ResourceList } from './ResourceList';
 import { CommonFieldsEditor } from './CommonFieldsEditor';
@@ -206,16 +206,20 @@ export function ManagerApp({ config }: ManagerAppProps) {
   const handleReorderCategories = useCallback(async (reordered: import('@aidocplus/manager-shared').CategoryDefinition[]) => {
     if (!dataDir) return;
     try {
-      const meta = {
-        schemaVersion: '1.0',
-        resourceType: config.resourceType,
-        categories: reordered,
-      };
-      await saveCategories(dataDir, meta);
+      if (isJsonMode) {
+        await saveJsonCategories(dataDir, reordered);
+      } else {
+        const meta = {
+          schemaVersion: '1.0',
+          resourceType: config.resourceType,
+          categories: reordered,
+        };
+        await saveCategories(dataDir, meta);
+      }
     } catch (e) {
       console.error('重排分类失败:', e);
     }
-  }, [dataDir, config.resourceType]);
+  }, [dataDir, config.resourceType, isJsonMode]);
 
   // 新建分类
   const handleCreateCategory = useCallback(async (key: string, name: string, icon: string) => {
@@ -223,20 +227,28 @@ export function ManagerApp({ config }: ManagerAppProps) {
     try {
       const store = useResourceStore.getState();
       const existingCategories = store.categories;
-      const meta = {
-        schemaVersion: '1.0',
-        resourceType: config.resourceType,
-        categories: [
+      const newOrder = Math.max(-1, ...existingCategories.map((c) => c.order)) + 1;
+      if (isJsonMode) {
+        await saveJsonCategories(dataDir, [
           ...existingCategories,
-          { key, name, icon, order: Math.max(-1, ...existingCategories.map((c) => c.order)) + 1 },
-        ],
-      };
-      await saveCategories(dataDir, meta);
+          { key, name, icon, order: newOrder },
+        ]);
+      } else {
+        const meta = {
+          schemaVersion: '1.0',
+          resourceType: config.resourceType,
+          categories: [
+            ...existingCategories,
+            { key, name, icon, order: newOrder },
+          ],
+        };
+        await saveCategories(dataDir, meta);
+      }
       setActiveDialog(null);
     } catch (e) {
       alert('创建分类失败: ' + String(e));
     }
-  }, [dataDir, config.resourceType]);
+  }, [dataDir, config.resourceType, isJsonMode]);
 
   // 删除
   const handleDelete = useCallback(async () => {
@@ -477,15 +489,17 @@ export function ManagerApp({ config }: ManagerAppProps) {
       if (newCategory) {
         const store = useResourceStore.getState();
         const existingCategories = store.categories;
-        const meta = {
-          schemaVersion: '1.0',
-          resourceType: config.resourceType,
-          categories: [
-            ...existingCategories,
-            { key: newCategory.key, name: newCategory.name, icon: newCategory.icon, order: existingCategories.length },
-          ],
-        };
-        await saveCategories(dataDir, meta);
+        const newCat = { key: newCategory.key, name: newCategory.name, icon: newCategory.icon, order: existingCategories.length };
+        if (isJsonMode) {
+          await saveJsonCategories(dataDir, [...existingCategories, newCat]);
+        } else {
+          const meta = {
+            schemaVersion: '1.0',
+            resourceType: config.resourceType,
+            categories: [...existingCategories, newCat],
+          };
+          await saveCategories(dataDir, meta);
+        }
       }
 
       // 逐个创建资源
