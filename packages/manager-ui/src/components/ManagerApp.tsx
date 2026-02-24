@@ -49,19 +49,20 @@ export function ManagerApp({ config }: ManagerAppProps) {
   const clearStacks = useUndoStore((s) => s.clearStacks);
   const hasSnapshotRef = useRef(false);
 
-  // 初始化数据目录：优先从后端获取（--data-dir 启动参数），fallback 到 config.defaultDataDir
+  // 初始化数据目录：config.defaultDataDir 由 App.tsx 根据资源类型计算好，直接使用
+  // 仅当 config.defaultDataDir 为空时才 fallback 到 cmd_get_data_dir（--data-dir 启动参数）
   useEffect(() => {
-    invoke<string | null>('cmd_get_data_dir')
-      .then((dir) => {
-        if (dir) {
-          setDataDir(dir);
-        } else {
-          setDataDir(config.defaultDataDir);
-        }
-      })
-      .catch(() => {
-        setDataDir(config.defaultDataDir);
-      });
+    if (config.defaultDataDir) {
+      setDataDir(config.defaultDataDir);
+    } else {
+      invoke<string | null>('cmd_get_data_dir')
+        .then((dir) => {
+          if (dir) {
+            setDataDir(dir);
+          }
+        })
+        .catch(() => {});
+    }
   }, [config.defaultDataDir, setDataDir]);
 
   // 加载数据

@@ -1,5 +1,6 @@
 use crate::types::{CategoryDefinition, ResourceSummary};
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::fs;
 use std::path::Path;
 
@@ -34,6 +35,20 @@ pub struct JsonTemplateEntry {
     pub variables: Vec<String>,
     #[serde(default)]
     pub order: i32,
+    #[serde(default, rename = "authorNotes")]
+    pub author_notes: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default, rename = "aiGeneratedContent")]
+    pub ai_generated_content: String,
+    #[serde(default, rename = "enabledPlugins")]
+    pub enabled_plugins: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "pluginData")]
+    pub plugin_data: Option<serde_json::Value>,
+    #[serde(default, rename = "includeContent")]
+    pub include_content: bool,
+    #[serde(default, rename = "includeAiContent")]
+    pub include_ai_content: bool,
 }
 
 /// 管理器前端需要的完整模板数据（含 manifest + content）
@@ -50,6 +65,20 @@ pub struct JsonResourceDetail {
     pub category_key: String,
     #[serde(rename = "categoryName")]
     pub category_name: String,
+    #[serde(default, rename = "authorNotes")]
+    pub author_notes: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default, rename = "aiGeneratedContent")]
+    pub ai_generated_content: String,
+    #[serde(default, rename = "enabledPlugins")]
+    pub enabled_plugins: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "pluginData")]
+    pub plugin_data: Option<serde_json::Value>,
+    #[serde(default, rename = "includeContent")]
+    pub include_content: bool,
+    #[serde(default, rename = "includeAiContent")]
+    pub include_ai_content: bool,
 }
 
 // ============================================================
@@ -169,6 +198,13 @@ pub fn read_json_template(data_dir: &str, category_key: &str, template_id: &str)
         order: tmpl.order,
         category_key: cat_file.key.clone(),
         category_name: cat_file.name.clone(),
+        author_notes: tmpl.author_notes.clone(),
+        tags: tmpl.tags.clone(),
+        ai_generated_content: tmpl.ai_generated_content.clone(),
+        enabled_plugins: tmpl.enabled_plugins.clone(),
+        plugin_data: tmpl.plugin_data.clone(),
+        include_content: tmpl.include_content,
+        include_ai_content: tmpl.include_ai_content,
     })
 }
 
@@ -185,6 +221,12 @@ pub fn save_json_template(
     description: &str,
     content: &str,
     variables: Vec<String>,
+    author_notes: Option<String>,
+    ai_generated_content: Option<String>,
+    enabled_plugins: Option<Vec<String>>,
+    plugin_data: Option<serde_json::Value>,
+    include_content: Option<bool>,
+    include_ai_content: Option<bool>,
 ) -> Result<(), String> {
     let json_path = Path::new(data_dir).join(format!("{}.json", category_key));
     let mut cat_file = read_category_file(&json_path)?;
@@ -197,6 +239,24 @@ pub fn save_json_template(
     tmpl.description = description.to_string();
     tmpl.content = content.to_string();
     tmpl.variables = variables;
+    if let Some(notes) = author_notes {
+        tmpl.author_notes = notes;
+    }
+    if let Some(ai) = ai_generated_content {
+        tmpl.ai_generated_content = ai;
+    }
+    if let Some(plugins) = enabled_plugins {
+        tmpl.enabled_plugins = plugins;
+    }
+    if let Some(pd) = plugin_data {
+        tmpl.plugin_data = Some(pd);
+    }
+    if let Some(ic) = include_content {
+        tmpl.include_content = ic;
+    }
+    if let Some(iac) = include_ai_content {
+        tmpl.include_ai_content = iac;
+    }
 
     write_category_file(&json_path, &cat_file)
 }
@@ -210,6 +270,12 @@ pub fn create_json_template(
     description: &str,
     content: &str,
     variables: Vec<String>,
+    author_notes: Option<String>,
+    ai_generated_content: Option<String>,
+    enabled_plugins: Option<Vec<String>>,
+    plugin_data: Option<serde_json::Value>,
+    include_content: Option<bool>,
+    include_ai_content: Option<bool>,
 ) -> Result<String, String> {
     let json_path = Path::new(data_dir).join(format!("{}.json", category_key));
 
@@ -240,6 +306,13 @@ pub fn create_json_template(
         content: content.to_string(),
         variables,
         order: max_order + 1,
+        author_notes: author_notes.unwrap_or_default(),
+        tags: Vec::new(),
+        ai_generated_content: ai_generated_content.unwrap_or_default(),
+        enabled_plugins: enabled_plugins.unwrap_or_default(),
+        plugin_data,
+        include_content: include_content.unwrap_or(false),
+        include_ai_content: include_ai_content.unwrap_or(false),
     });
 
     write_category_file(&json_path, &cat_file)?;

@@ -333,8 +333,14 @@ pub fn cmd_save_json_template(
     description: String,
     content: String,
     variables: Vec<String>,
+    author_notes: Option<String>,
+    ai_generated_content: Option<String>,
+    enabled_plugins: Option<Vec<String>>,
+    plugin_data: Option<serde_json::Value>,
+    include_content: Option<bool>,
+    include_ai_content: Option<bool>,
 ) -> Result<(), String> {
-    json_file_ops::save_json_template(&data_dir, &category_key, &template_id, &name, &description, &content, variables)
+    json_file_ops::save_json_template(&data_dir, &category_key, &template_id, &name, &description, &content, variables, author_notes, ai_generated_content, enabled_plugins, plugin_data, include_content, include_ai_content)
 }
 
 #[tauri::command]
@@ -346,8 +352,14 @@ pub fn cmd_create_json_template(
     description: String,
     content: String,
     variables: Vec<String>,
+    author_notes: Option<String>,
+    ai_generated_content: Option<String>,
+    enabled_plugins: Option<Vec<String>>,
+    plugin_data: Option<serde_json::Value>,
+    include_content: Option<bool>,
+    include_ai_content: Option<bool>,
 ) -> Result<String, String> {
-    json_file_ops::create_json_template(&data_dir, &category_key, &id, &name, &description, &content, variables)
+    json_file_ops::create_json_template(&data_dir, &category_key, &id, &name, &description, &content, variables, author_notes, ai_generated_content, enabled_plugins, plugin_data, include_content, include_ai_content)
 }
 
 #[tauri::command]

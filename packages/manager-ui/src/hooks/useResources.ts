@@ -162,6 +162,13 @@ export interface JsonResourceDetail {
   order: number;
   categoryKey: string;
   categoryName: string;
+  authorNotes: string;
+  tags: string[];
+  aiGeneratedContent: string;
+  enabledPlugins: string[];
+  pluginData?: Record<string, unknown> | null;
+  includeContent: boolean;
+  includeAiContent: boolean;
 }
 
 /**
@@ -199,27 +206,42 @@ export async function loadJsonResourceDetail(
   });
 
   // 适配为 ResourceItem 格式
-  const manifest: ManifestBase = {
+  const manifest: ManifestBase & Record<string, unknown> = {
     id: detail.id,
     name: detail.name,
     description: detail.description,
     icon: '',
     version: '1.0.0',
     author: 'AiDocPlus',
-    resourceType: detail.categoryKey === 'ppt-theme' ? 'document-template' : 'prompt-template',
+    resourceType: 'prompt-template',
     majorCategory: detail.categoryKey,
     subCategory: '',
-    tags: [],
+    tags: detail.tags || [],
     order: detail.order,
     enabled: true,
     source: 'builtin',
     createdAt: '',
     updatedAt: '',
+    enabledPlugins: detail.enabledPlugins || [],
+    pluginData: detail.pluginData || null,
+    includeContent: detail.includeContent || false,
+    includeAiContent: detail.includeAiContent || false,
   };
 
   const contentFiles: Record<string, string> = {};
   if (contentFileSpecs.length > 0) {
-    contentFiles[contentFileSpecs[0].filename] = detail.content;
+    const spec = contentFileSpecs[0];
+    if (spec.filename === 'content.json') {
+      // 文档模板：将所有内容字段组装为 JSON 对象
+      contentFiles[spec.filename] = JSON.stringify({
+        authorNotes: detail.authorNotes || '',
+        content: detail.content || '',
+        aiGeneratedContent: detail.aiGeneratedContent || '',
+        pluginData: detail.pluginData || null,
+      }, null, 2);
+    } else {
+      contentFiles[spec.filename] = detail.content;
+    }
   }
 
   return {
@@ -240,9 +262,27 @@ export async function saveJsonResource(
   contentFileSpecs: ContentFileSpec[]
 ): Promise<void> {
   const categoryKey = resource.manifest.majorCategory;
-  const content = contentFileSpecs.length > 0
-    ? (resource.contentFiles[contentFileSpecs[0].filename] || '')
-    : '';
+  const m = resource.manifest as Record<string, unknown>;
+  const spec = contentFileSpecs.length > 0 ? contentFileSpecs[0] : null;
+  const rawContent = spec ? (resource.contentFiles[spec.filename] || '') : '';
+
+  let content = rawContent;
+  let authorNotes: string | null = null;
+  let aiGeneratedContent: string | null = null;
+  let pluginData: Record<string, unknown> | null = null;
+
+  // 文档模板：从 content.json 中提取所有字段
+  if (spec?.filename === 'content.json') {
+    try {
+      const parsed = JSON.parse(rawContent);
+      content = parsed.content || '';
+      authorNotes = parsed.authorNotes || '';
+      aiGeneratedContent = parsed.aiGeneratedContent || '';
+      pluginData = parsed.pluginData || null;
+    } catch {
+      // 解析失败时保持原样
+    }
+  }
 
   await invoke('cmd_save_json_template', {
     dataDir,
@@ -251,7 +291,13 @@ export async function saveJsonResource(
     name: resource.manifest.name,
     description: resource.manifest.description || '',
     content,
-    variables: (resource.manifest as Record<string, unknown>).variables || [],
+    variables: m.variables || [],
+    authorNotes,
+    aiGeneratedContent,
+    enabledPlugins: m.enabledPlugins || null,
+    pluginData,
+    includeContent: m.includeContent ?? null,
+    includeAiContent: m.includeAiContent ?? null,
   });
 }
 
@@ -265,14 +311,39 @@ export async function createJsonResource(
   manifest: Record<string, unknown>,
   contentFiles: Array<{ filename: string; content: string }>
 ): Promise<string> {
+  const file = contentFiles.length > 0 ? contentFiles[0] : null;
+  let content = file?.content || '';
+  let authorNotes: string | null = null;
+  let aiGeneratedContent: string | null = null;
+  let pluginData: Record<string, unknown> | null = null;
+
+  // 文档模板：从 content.json 中提取
+  if (file?.filename === 'content.json') {
+    try {
+      const parsed = JSON.parse(content);
+      content = parsed.content || '';
+      authorNotes = parsed.authorNotes || '';
+      aiGeneratedContent = parsed.aiGeneratedContent || '';
+      pluginData = parsed.pluginData || null;
+    } catch {
+      // ignore
+    }
+  }
+
   return await invoke<string>('cmd_create_json_template', {
     dataDir,
     categoryKey: category,
     id,
     name: (manifest.name as string) || '',
     description: (manifest.description as string) || '',
-    content: contentFiles.length > 0 ? contentFiles[0].content : '',
+    content,
     variables: (manifest.variables as string[]) || [],
+    authorNotes,
+    aiGeneratedContent,
+    enabledPlugins: (manifest.enabledPlugins as string[]) || null,
+    pluginData,
+    includeContent: manifest.includeContent ?? null,
+    includeAiContent: manifest.includeAiContent ?? null,
   });
 }
 

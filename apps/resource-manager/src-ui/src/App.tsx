@@ -3,24 +3,47 @@ import { invoke } from '@tauri-apps/api/core';
 import { ManagerApp } from '@aidocplus/manager-ui';
 import { ALL_RESOURCE_TYPES, type ResourceTypeKey, type ResourceTypeMeta } from './configs';
 
+// 资源类型 → bundled-resources 子目录名
+const BUNDLED_SUB_DIRS: Record<string, string> = {
+  'prompt-templates': 'prompt-templates',
+  'doc-templates': 'document-templates',
+};
+
 export function App() {
   const [activeType, setActiveType] = useState<ResourceTypeKey>('prompt-templates');
+  const [initialResourceType, setInitialResourceType] = useState<string>('');
   const [externalDataDir, setExternalDataDir] = useState<string>('');
+  const [bundledDirs, setBundledDirs] = useState<Record<string, string>>({});
   const [initialized, setInitialized] = useState(false);
 
-  // 初始化：从后端获取 --resource-type 和 --data-dir
+  // 初始化：从后端获取 --resource-type、--data-dir，以及各资源类型的 bundled 路径
   useEffect(() => {
     Promise.all([
       invoke<string>('cmd_get_resource_type').catch(() => ''),
       invoke<string | null>('cmd_get_data_dir').catch(() => null),
-    ]).then(([resourceType, dataDir]) => {
-      if (resourceType && ALL_RESOURCE_TYPES.some((t) => t.key === resourceType)) {
-        setActiveType(resourceType as ResourceTypeKey);
+      // 为每种资源类型查询 bundled-resources 路径
+      ...Object.entries(BUNDLED_SUB_DIRS).map(([key, sub]) =>
+        invoke<string | null>('cmd_get_bundled_sub_dir', { sub })
+          .then((dir) => [key, dir] as [string, string | null])
+          .catch(() => [key, null] as [string, string | null])
+      ),
+    ]).then(([resourceType, dataDir, ...bundledResults]) => {
+      const rt = resourceType as string;
+      if (rt && ALL_RESOURCE_TYPES.some((t) => t.key === rt)) {
+        setActiveType(rt as ResourceTypeKey);
+        setInitialResourceType(rt);
       }
       if (dataDir) {
-        setExternalDataDir(dataDir);
+        setExternalDataDir(dataDir as string);
       }
-      console.log('[DEBUG] 初始化完成:', { resourceType, dataDir });
+      // 收集 bundled 路径
+      const dirs: Record<string, string> = {};
+      for (const result of bundledResults) {
+        const [key, dir] = result as [string, string | null];
+        if (dir) dirs[key] = dir;
+      }
+      setBundledDirs(dirs);
+      console.log('[DEBUG] 初始化完成:', { resourceType, dataDir, bundledDirs: dirs });
       setInitialized(true);
     });
   }, []);
@@ -33,14 +56,27 @@ export function App() {
     (meta: ResourceTypeMeta) => {
       const config = { ...meta.config };
 
-      // 主程序传入的 --data-dir 用于当前活跃类型
-      if (meta.key === activeType && externalDataDir) {
+      // 启动时指定的资源类型：使用主程序传入的 --data-dir
+      if (meta.key === initialResourceType && externalDataDir) {
         config.defaultDataDir = externalDataDir;
+      }
+      // 其他类型：使用 bundled-resources 路径
+      else if (bundledDirs[meta.key]) {
+        config.defaultDataDir = bundledDirs[meta.key];
+      }
+      // fallback：从 externalDataDir 推导兄弟资源类型的路径
+      // 例如 externalDataDir = .../bundled-resources/prompt-templates
+      // 则 doc-templates 的路径 = .../bundled-resources/document-templates
+      else if (externalDataDir && BUNDLED_SUB_DIRS[meta.key]) {
+        // 跨平台：同时匹配 / 和 \（Windows 路径使用反斜杠）
+        const sep = externalDataDir.includes('\\') ? '\\' : '/';
+        const parentDir = externalDataDir.replace(/[/\\][^/\\]+[/\\]?$/, '');
+        config.defaultDataDir = `${parentDir}${sep}${BUNDLED_SUB_DIRS[meta.key]}`;
       }
 
       return config;
     },
-    [activeType, externalDataDir]
+    [initialResourceType, externalDataDir, bundledDirs]
   );
 
   if (!initialized) {

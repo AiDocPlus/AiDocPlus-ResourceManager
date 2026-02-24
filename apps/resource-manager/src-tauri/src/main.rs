@@ -3,12 +3,35 @@
 use aidocplus_manager_rust::commands::DataDirState;
 use std::path::PathBuf;
 use std::sync::OnceLock;
+use tauri::Manager;
 
 /// bundled-resources 根目录缓存
 static BUNDLED_RESOURCES_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
 
-/// 从 exe 路径向上查找 bundled-resources 目录
-fn find_bundled_resources() -> Option<PathBuf> {
+/// 在 Tauri setup 中初始化 bundled-resources 路径（优先使用 Tauri resource_dir，跨平台安全）
+fn init_bundled_resources_dir(app: &tauri::App) {
+    // 1. 优先使用 Tauri resource_dir（release 模式，跨平台正确解析）
+    if let Ok(dir) = app.path().resource_dir() {
+        let bundled = dir.join("bundled-resources");
+        if bundled.exists() {
+            eprintln!("[paths] bundled-resources (resource_dir): {}", bundled.display());
+            let _ = BUNDLED_RESOURCES_DIR.set(Some(bundled));
+            return;
+        }
+    }
+
+    // 2. 回退：从 exe 路径向上查找（兼容 dev 模式和独立运行）
+    let result = find_bundled_resources_from_exe();
+    if let Some(ref dir) = result {
+        eprintln!("[paths] bundled-resources (exe fallback): {}", dir.display());
+    } else {
+        eprintln!("[paths] 警告: 未找到 bundled-resources 目录");
+    }
+    let _ = BUNDLED_RESOURCES_DIR.set(result);
+}
+
+/// 从 exe 路径向上查找 bundled-resources 目录（fallback）
+fn find_bundled_resources_from_exe() -> Option<PathBuf> {
     let exe = std::env::current_exe().ok()?;
     let mut dir = exe.parent()?.to_path_buf();
     loop {
@@ -66,6 +89,10 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .manage(data_dir_state)
         .manage(resource_type_state)
+        .setup(|app| {
+            init_bundled_resources_dir(app);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             cmd_get_resource_type,
             cmd_get_home_dir,
@@ -126,7 +153,8 @@ fn cmd_get_home_dir() -> Result<String, String> {
 
 #[tauri::command]
 fn cmd_get_bundled_sub_dir(sub: String) -> Option<String> {
-    let bundled = BUNDLED_RESOURCES_DIR.get_or_init(find_bundled_resources);
+    let bundled = BUNDLED_RESOURCES_DIR.get()
+        .unwrap_or(&None);
     bundled.as_ref().and_then(|b| {
         let path = b.join(&sub);
         if path.exists() {

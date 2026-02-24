@@ -2,8 +2,7 @@ import type { EditorPanelProps } from '@aidocplus/manager-shared';
 
 export function DocTemplateEditor({ resource, onChange }: EditorPanelProps) {
   const contentJson = resource.contentFiles['content.json'] || '{}';
-  const roles: string[] = (resource.manifest.roles as string[]) || [];
-  const isPPT = resource.manifest.majorCategory === 'ppt-theme';
+  const m = resource.manifest as Record<string, unknown>;
 
   let parsed: Record<string, unknown> = {};
   try {
@@ -17,111 +16,111 @@ export function DocTemplateEditor({ resource, onChange }: EditorPanelProps) {
     onChange({ contentFiles: { 'content.json': JSON.stringify(updated, null, 2) } });
   };
 
+  const updateManifestField = (field: string, value: unknown) => {
+    onChange({ manifest: { [field]: value } });
+  };
+
   return (
     <div className="space-y-5 p-5 border rounded-lg">
-      <h3 className="text-sm font-semibold text-muted-foreground">
-        {isPPT ? 'PPT 主题特有字段' : '文档模板特有字段'}
-      </h3>
+      <h3 className="text-sm font-semibold text-muted-foreground">文档模板内容</h3>
 
-      {/* 关联角色（仅文档模板） */}
-      {!isPPT && (
-        <div className="space-y-2">
-          <label className="font-medium">关联角色（逗号分隔）</label>
-          <input
-            type="text"
-            value={roles.join(', ')}
-            onChange={(e) => {
-              const next = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
-              onChange({ manifest: { roles: next } });
-            }}
-            className="w-full h-10 rounded-md border border-input bg-white px-3 outline-none focus:ring-1 focus:ring-ring"
-            placeholder="default, writer, ..."
-          />
-        </div>
-      )}
+      {/* 提示词（原 authorNotes） */}
+      <div className="space-y-2">
+        <label className="font-medium">提示词</label>
+        <textarea
+          value={(parsed.authorNotes as string) || ''}
+          onChange={(e) => updateContentField('authorNotes', e.target.value)}
+          rows={4}
+          className="w-full rounded-md border border-input bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-ring resize-y"
+          placeholder="AI 生成文档时使用的提示词..."
+        />
+      </div>
 
-      {/* PPT 主题颜色 */}
-      {isPPT && (
-        <>
-          <div className="space-y-2">
-            <label className="font-medium">主色调</label>
+      {/* 素材内容（原 content） */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="font-medium">素材内容</label>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
-              type="text"
-              value={(parsed.primaryColor as string) || ''}
-              onChange={(e) => updateContentField('primaryColor', e.target.value)}
-              className="w-full h-10 rounded-md border border-input bg-white px-3 outline-none focus:ring-1 focus:ring-ring"
-              placeholder="#1a73e8"
+              type="checkbox"
+              checked={!!m.includeContent}
+              onChange={(e) => updateManifestField('includeContent', e.target.checked)}
+              className="rounded"
             />
-          </div>
-          <div className="space-y-2">
-            <label className="font-medium">字体</label>
+            包含素材
+          </label>
+        </div>
+        <textarea
+          value={(parsed.content as string) || ''}
+          onChange={(e) => updateContentField('content', e.target.value)}
+          rows={8}
+          className="w-full rounded-md border border-input bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-ring resize-y font-mono"
+          placeholder="模板素材内容..."
+        />
+      </div>
+
+      {/* 正文内容（aiGeneratedContent） */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="font-medium">正文内容</label>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
-              type="text"
-              value={(parsed.fontFamily as string) || ''}
-              onChange={(e) => updateContentField('fontFamily', e.target.value)}
-              className="w-full h-10 rounded-md border border-input bg-white px-3 outline-none focus:ring-1 focus:ring-ring"
-              placeholder="微软雅黑"
+              type="checkbox"
+              checked={!!m.includeAiContent}
+              onChange={(e) => updateManifestField('includeAiContent', e.target.checked)}
+              className="rounded"
             />
-          </div>
-        </>
-      )}
-
-      {/* 文档模板内容 */}
-      {!isPPT && (
-        <>
-          <div className="space-y-2">
-            <label className="font-medium">作者备注</label>
-            <textarea
-              value={(parsed.authorNotes as string) || ''}
-              onChange={(e) => updateContentField('authorNotes', e.target.value)}
-              rows={3}
-              className="w-full rounded-md border border-input bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-ring resize-y"
-              placeholder="模板使用说明..."
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="font-medium">模板正文</label>
-            <textarea
-              value={(parsed.content as string) || ''}
-              onChange={(e) => updateContentField('content', e.target.value)}
-              rows={12}
-              className="w-full rounded-md border border-input bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-ring resize-y font-mono"
-              placeholder="模板正文内容..."
-            />
-          </div>
-        </>
-      )}
-
-      {/* i18n */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="font-medium">英文名称</label>
-          <input
-            type="text"
-            value={(resource.manifest.i18n?.en?.name as string) || ''}
-            onChange={(e) => {
-              const i18n = resource.manifest.i18n || {};
-              const en = i18n.en || {};
-              onChange({ manifest: { i18n: { ...i18n, en: { ...en, name: e.target.value } } } });
-            }}
-            className="w-full h-10 rounded-md border border-input bg-white px-3 outline-none focus:ring-1 focus:ring-ring"
-            placeholder="English name"
-          />
+            包含正文
+          </label>
         </div>
-        <div className="space-y-2">
-          <label className="font-medium">英文描述</label>
-          <input
-            type="text"
-            value={(resource.manifest.i18n?.en?.description as string) || ''}
-            onChange={(e) => {
-              const i18n = resource.manifest.i18n || {};
-              const en = i18n.en || {};
-              onChange({ manifest: { i18n: { ...i18n, en: { ...en, description: e.target.value } } } });
-            }}
-            className="w-full h-10 rounded-md border border-input bg-white px-3 outline-none focus:ring-1 focus:ring-ring"
-            placeholder="English description"
-          />
-        </div>
+        <textarea
+          value={(parsed.aiGeneratedContent as string) || ''}
+          onChange={(e) => updateContentField('aiGeneratedContent', e.target.value)}
+          rows={6}
+          className="w-full rounded-md border border-input bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-ring resize-y font-mono"
+          placeholder="AI 生成的正文内容..."
+        />
+      </div>
+
+      {/* 预设插件 */}
+      <div className="space-y-2">
+        <label className="font-medium">预设插件</label>
+        <input
+          type="text"
+          value={((m.enabledPlugins as string[]) || []).join(', ')}
+          onChange={(e) => {
+            const plugins = e.target.value
+              .split(',')
+              .map((s: string) => s.trim())
+              .filter(Boolean);
+            updateManifestField('enabledPlugins', plugins);
+          }}
+          className="w-full h-10 rounded-md border border-input bg-white px-3 outline-none focus:ring-1 focus:ring-ring"
+          placeholder="插件ID，多个用逗号分隔（如 ppt, outline）"
+        />
+      </div>
+
+      {/* 插件数据 */}
+      <div className="space-y-2">
+        <label className="font-medium">插件数据（JSON）</label>
+        <textarea
+          value={parsed.pluginData ? JSON.stringify(parsed.pluginData, null, 2) : ''}
+          onChange={(e) => {
+            const val = e.target.value.trim();
+            if (!val) {
+              updateContentField('pluginData', null);
+            } else {
+              try {
+                updateContentField('pluginData', JSON.parse(val));
+              } catch {
+                // 输入中的 JSON 暂时无效，不更新
+              }
+            }
+          }}
+          rows={4}
+          className="w-full rounded-md border border-input bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-ring resize-y font-mono text-xs"
+          placeholder='{"pluginId": {...}}'
+        />
       </div>
     </div>
   );
